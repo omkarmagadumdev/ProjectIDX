@@ -1,5 +1,7 @@
 import usePing from './hooks/apis/queries/usePing.js'
 import './App.css'
+import { Route, Routes } from 'react-router-dom';
+import { CreateProject } from './pages/CreateProject.jsx'
 
 function App() {
 
@@ -15,9 +17,9 @@ function App() {
     }
 
   return (
-    <>
-     Hello {data.message}
-    </>
+   <Routes>
+       <Route path='/' element={<CreateProject/>}/>
+   </Routes>
   )
 }
 

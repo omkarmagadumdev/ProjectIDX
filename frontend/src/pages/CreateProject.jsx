@@ -1,10 +1,14 @@
 import { Button,Layout } from "antd";
 import { useCreateProject } from "../hooks/apis/mutations/useCreateProject"
 import "./CreateProject.css"
+import { useNavigate } from "react-router-dom";
+
 
 export const CreateProject= () => {
  
   const  { createProjectMutation } =  useCreateProject();
+  
+  const navigate = useNavigate()
 
 
 
@@ -13,8 +17,9 @@ export const CreateProject= () => {
     async function handleCreateProject(){
             console.log('Going to trugger the api');
             try{
-                    await createProjectMutation()
+                    const response = await createProjectMutation()
                     console.log("now we can redirtect to editor");
+                    navigate(`/project/${response.data}`)
                     
             }
             catch(error){

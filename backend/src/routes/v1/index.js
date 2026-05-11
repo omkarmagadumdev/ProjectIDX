@@ -6,7 +6,8 @@ const router = express.Router();
 
 router.use('/ping',pingCheck);
 
-router.use('/projects',projectRouter)
+// Support singular `/project/:id` requests (some clients use singular path)
+router.use('/project', projectRouter)
 
 export default router;
 

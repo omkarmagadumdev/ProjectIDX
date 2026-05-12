@@ -4,7 +4,7 @@ import { getProjectTree } from "../../../apis/project";
 export default function useProjectTree( projectId ){
 
        const { isLoading,isError,error,data:projectTree } =  useQueries({
-            queryfn:()=> getProjectTree({ projectId })
+            queryFn:()=> getProjectTree({ projectId })
         });
 
 

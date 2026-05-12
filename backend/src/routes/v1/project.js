@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.post('/',createProjectConroller)
 
-router.get('/:projectId',getProjectTree);
+router.get('/:projectId/tree',getProjectTree);
 
 
 export default router;

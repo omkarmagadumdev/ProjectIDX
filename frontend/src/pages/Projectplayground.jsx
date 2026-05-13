@@ -30,7 +30,7 @@ const ProjectPlayground = ()=>{
                     paddingTop:'0.3vh',
                     minWidth:'250px',
                     maxWidth:'25%',
-                    height:'84.7ch',
+                    height:'100vh',
                     overflow:'auto',
                     marginRight:'10px'
                 }}

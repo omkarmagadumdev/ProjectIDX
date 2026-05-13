@@ -29,7 +29,7 @@ const EditorComponent = () => {
   return ( 
     <>
       {editorState.theme && <Editor 
-        height={'80vh'}
+        height={'100vh'}
         width={'100%'}
         defaultLanguage='javascript'
         defaultValue='// Weclocme to the playground'
@@ -37,6 +37,7 @@ const EditorComponent = () => {
         options={{
             fontSize: 18,
             fontFamily: "monospace"
+            
         }}
       />}
  

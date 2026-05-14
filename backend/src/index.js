@@ -4,6 +4,11 @@ import  { PORT  } from './config/serverConfig.js'
 import apiRouter from './routes/index.js'
 import { Server } from 'socket.io';
 import { createServer, get } from 'node:http'
+import chokidar from 'chokidar';
+import path from 'path'
+
+
+
 const app = express();
 
 const server = createServer(app);
@@ -24,9 +29,47 @@ app.get('/ping',(req,res)=>{
 })
 
 io.on('connection',(socket)=>{
-    console.log("a user connected");
+    console.log("a user connected");    
+})
+
+const editorNamespace = io.of('/editor')
+
+editorNamespace.on('connection',(socket)=>{
+    console.log("editor connected");
+    
+    let projectId = '123';
+
+    if(projectId){
+        var watcher = chokidar.watch(`projects/${projectId}`,{
+            ignored:(path)=>path.includes(node_modules),
+            persistent:true,
+            awaitWriteFinish:{
+                stabilityThreshold:2000,
+            },
+            ignoreInitial:true
+        });
+
+        watcher.on('all',(event,path)=>{
+            console.log(event,path);
+ 
+        })
+    }
+
+
+    socket.on('message',(data)=>{
+        console.log(data);
+        console.log("got a message event",data);
+        
+        
+    })
+
+    socket.on('disconnect',()=>{
+        console.log("editor disconnected");
+        watcher.close()
+    })
     
 })
+
 
 app.use('/api',apiRouter)
 

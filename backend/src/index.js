@@ -6,12 +6,14 @@ import { Server } from 'socket.io';
 import { createServer, get } from 'node:http'
 import chokidar from 'chokidar';
 import path from 'path'
+import { handleEditorSocketEvents } from './SockateHandlers/editorHandlers..js';
 
 
 
 const app = express();
 
 const server = createServer(app);
+
 const io = new Server(server,{
     cors:{
         origin:'*',
@@ -35,13 +37,21 @@ io.on('connection',(socket)=>{
 const editorNamespace = io.of('/editor')
 
 editorNamespace.on('connection',(socket)=>{
-    console.log("editor connected");
-    
-    let projectId = '123';
+    console.log("editor connected", socket.id);
+
+    console.log(socket.handshake.query['projectId']);
+
+    // `socket.handshake.query` is already an object parsed by Socket.IO.
+    // Use it directly instead of calling `query-string`.
+    const queryParams = socket.handshake.query;
+    let projectId = queryParams.projectId;
+
+    // keep watcher in this scope so we can close it on disconnect
+    let watcher = null;
 
     if(projectId){
-        var watcher = chokidar.watch(`projects/${projectId}`,{
-            ignored:(path)=>path.includes(node_modules),
+        watcher = chokidar.watch(`projects/${projectId}`,{
+            ignored:(path)=>path.includes('node_modules'),
             persistent:true,
             awaitWriteFinish:{
                 stabilityThreshold:2000,
@@ -51,24 +61,20 @@ editorNamespace.on('connection',(socket)=>{
 
         watcher.on('all',(event,path)=>{
             console.log(event,path);
- 
-        })
+        });
     }
 
+    handleEditorSocketEvents(socket)
 
-    socket.on('message',(data)=>{
-        console.log(data);
-        console.log("got a message event",data);
-        
-        
-    })
+    socket.on('disconnect',(reason)=>{
+        console.log('editor disconnected', socket.id, reason);
+        if(watcher){
+            watcher.close().catch(()=>{});
+            watcher = null;
+        }
+    });
 
-    socket.on('disconnect',()=>{
-        console.log("editor disconnected");
-        watcher.close()
-    })
-    
-})
+});
 
 
 app.use('/api',apiRouter)

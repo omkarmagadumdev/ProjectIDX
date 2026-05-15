@@ -2,6 +2,7 @@ import { useState } from "react";
 import { GoChevronRight } from "react-icons/go";
 import { GoChevronDown } from "react-icons/go";
 import FileIcon from '../../atoms/Fileicon/FileIcon';
+import { useEditorSocketStore } from "../../../store/useEditorSocketStore";
 
 
 export const TreeNode = ({
@@ -11,12 +12,34 @@ export const TreeNode = ({
     if (!fileFolderData) return null;
 
     const hasChildren = Array.isArray(fileFolderData.children) && fileFolderData.children.length > 0;
+    
+    const {editorSocket} = useEditorSocketStore()
 
     function toggleVisiblity(name){
         setVisibility({
             ...visibility,
             [name]:!visibility[name]
         })
+    }
+
+    function handleOnDoubleClick(fileFolderData){
+        console.log("double clicked",fileFolderData);
+
+        const filePath = fileFolderData?.path;
+
+        if (!editorSocket || !filePath) {
+            console.warn("Cannot request file contents", {
+                hasSocket: Boolean(editorSocket),
+                filePath,
+            });
+            return;
+        }
+
+        editorSocket.emit('readFile',{
+            path:filePath,
+            pathToFileOrFolder:filePath
+        })
+
     }
     
     return(
@@ -63,7 +86,9 @@ export const TreeNode = ({
                     fontSize:'15px',
                     cursor:'pointer',
                     color:'white'
-                }}>
+                }}
+                onDoubleClick={()=>handleOnDoubleClick(fileFolderData)}
+                >
                     
                     {fileFolderData.name}
                 </p>

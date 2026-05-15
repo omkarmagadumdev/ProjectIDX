@@ -4,15 +4,41 @@ import { EditorButton } from "../components/atoms/EditorButton/EditorButton.jsx"
 import TreeStructure from "../components/organisms/TreeStructure/TreeStructure.jsx"
 import { useEffect } from "react"
 import { useTreeStructureStore } from "../store/treeStructureStore.js"
+import { useEditorSocketStore } from "../store/useEditorSocketStore.js"
+import { io } from 'socket.io-client'
+
 
 const ProjectPlayground = ()=>{
     
     const { projectId:projectIdFromUrl } = useParams();
     const { projectId, setProjectId } = useTreeStructureStore();
 
+    const { setEditorSocket } = useEditorSocketStore()
+
     useEffect(()=>{
-            setProjectId(projectIdFromUrl)
-    },[setProjectId,projectIdFromUrl])
+        let editorSocketConnection;
+
+        if(projectIdFromUrl){
+            setProjectId(projectIdFromUrl);
+            editorSocketConnection = io(`${import.meta.env.VITE_BACKEND_URL}/editor`,{
+                query:{
+                    projectId:projectIdFromUrl
+                }
+            })
+            setEditorSocket(editorSocketConnection)
+        }
+
+        return ()=>{
+            if(editorSocketConnection && typeof editorSocketConnection.disconnect === 'function'){
+                editorSocketConnection.disconnect();
+            }
+            // optional: clear the store reference so consumers don't use a stale socket
+            try{ setEditorSocket(null) }catch(e){}
+        }
+
+    },[setProjectId,projectIdFromUrl,setEditorSocket])
+
+
     return(
         <>
            

@@ -1,5 +1,4 @@
-import { readFile } from 'fs';
-import fs from 'fs/promises'
+import fs, { readFile } from 'fs/promises'
 
 export const handleEditorSocketEvents = (socket)=>{
     socket.on("writeFile",async({ data,pathToFileOrFolder })=>{
@@ -47,12 +46,14 @@ export const handleEditorSocketEvents = (socket)=>{
     })
 
     socket.on("readfile",async({ pathToFileOrFolder })=>{
+        console.log("readfile event received with path:", pathToFileOrFolder);
         try {
             const response = await readFile(pathToFileOrFolder);
-            console.log(response.toString());
+            console.log("File contents:", response.toString());
             
             socket.emit("readFileSuccess",{
-                data:response.toString()
+                value:response.toString(),
+                path:pathToFileOrFolder
             });
 
         } catch (error) {

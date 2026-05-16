@@ -9,11 +9,11 @@ export const TreeNode = ({
     fileFolderData
 })=>{
      const [ visibility,setVisibility ] = useState({})
+    const {editorSocket} = useEditorSocketStore()
+
     if (!fileFolderData) return null;
 
     const hasChildren = Array.isArray(fileFolderData.children) && fileFolderData.children.length > 0;
-    
-    const {editorSocket} = useEditorSocketStore()
 
     function toggleVisiblity(name){
         setVisibility({
@@ -35,7 +35,8 @@ export const TreeNode = ({
             return;
         }
 
-        editorSocket.emit('readFile',{
+        console.log("Emitting readfile event with path:", filePath);
+        editorSocket.emit('readfile',{
             path:filePath,
             pathToFileOrFolder:filePath
         })

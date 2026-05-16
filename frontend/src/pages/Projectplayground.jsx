@@ -16,25 +16,26 @@ const ProjectPlayground = ()=>{
     const { setEditorSocket } = useEditorSocketStore()
 
     useEffect(()=>{
-        let editorSocketConnection;
+        
 
         if(projectIdFromUrl){
             setProjectId(projectIdFromUrl);
-            editorSocketConnection = io(`${import.meta.env.VITE_BACKEND_URL}/editor`,{
+          const editorSocketConnection = io(`${import.meta.env.VITE_BACKEND_URL}/editor`,{
                 query:{
                     projectId:projectIdFromUrl
                 }
             })
+            console.log('ProjectPlayground: created editor socket', editorSocketConnection)
             setEditorSocket(editorSocketConnection)
         }
 
-        return ()=>{
-            if(editorSocketConnection && typeof editorSocketConnection.disconnect === 'function'){
-                editorSocketConnection.disconnect();
-            }
-            // optional: clear the store reference so consumers don't use a stale socket
-            try{ setEditorSocket(null) }catch(e){}
-        }
+        // return ()=>{
+        //     if(editorSocketConnection && typeof editorSocketConnection.disconnect === 'function'){
+        //         editorSocketConnection.disconnect();
+        //     }
+        //     // optional: clear the store reference so consumers don't use a stale socket
+        //     try{ setEditorSocket(null) }catch(e){}
+        // }
 
     },[setProjectId,projectIdFromUrl,setEditorSocket])
 

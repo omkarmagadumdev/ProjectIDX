@@ -27,9 +27,11 @@ const io = new Server(server, {
 });
 
 const editorNamespace = io.of('/editor');
+
+
 editorNamespace.on('connection', (socket) => {
     console.log('Editor socket connected', socket.id);
-    handleEditorSocketEvents(socket);
+    handleEditorSocketEvents(socket,editorNamespace);
 });
 
 server.listen(PORT,()=>{

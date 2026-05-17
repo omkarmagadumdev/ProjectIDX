@@ -29,13 +29,7 @@ const ProjectPlayground = ()=>{
             setEditorSocket(editorSocketConnection)
         }
 
-        // return ()=>{
-        //     if(editorSocketConnection && typeof editorSocketConnection.disconnect === 'function'){
-        //         editorSocketConnection.disconnect();
-        //     }
-        //     // optional: clear the store reference so consumers don't use a stale socket
-        //     try{ setEditorSocket(null) }catch(e){}
-        // }
+        
 
     },[setProjectId,projectIdFromUrl,setEditorSocket])
 

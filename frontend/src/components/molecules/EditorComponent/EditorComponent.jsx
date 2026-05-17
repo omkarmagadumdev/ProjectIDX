@@ -2,17 +2,21 @@ import React, { useEffect, useState } from 'react'
 import { Editor } from '@monaco-editor/react'
 import { theme } from 'antd';
 import { EditorButton } from '../../atoms/EditorButton/EditorButton';
-import { useEditorSocketStore } from '../../../store/useEditorSocketStore';
 import { useActiveFileTabStore } from '../../../store/useActiveFileTabStore';
+import { useEditorSocketStore } from '../../../store/useEditorSocketStore';
 
 const EditorComponent = () => {
 
+  let timerId = null
+  const { activeFileTab } = useActiveFileTabStore()
   const { editorSocket } = useEditorSocketStore()
-  const { activeFileTab,setActiveFileTab } = useActiveFileTabStore()
+
 
   const [editorState, setEditorState] = useState({
     theme:null
   });
+
+
 
   async function downloadTheme(){
     const response = await fetch("/Dracula.json");
@@ -20,27 +24,18 @@ const EditorComponent = () => {
     setEditorState(prev => ({...prev,theme:data}))
   }
 
-
-  useEffect(()=>{
-    if (!editorSocket) return
-
-    const handleReadFileSuccess = (data) => {
-      console.log("read file succcess", data);
-      setActiveFileTab(data.value, data.path)
-    }
-
-    // attach listener
-    if (typeof editorSocket.on === 'function') {
-      editorSocket.on("readFileSuccess", handleReadFileSuccess)
-    }
-
-    // cleanup
-    return () => {
-      if (editorSocket && typeof editorSocket.off === 'function') {
-        editorSocket.off("readFileSuccess", handleReadFileSuccess)
+  function handleChange(value){
+      const editorContent = value;
+      if(timerId != null){
+        clearTimeout(timerId)
       }
-    }
-  }, [editorSocket, setActiveFileTab])
+     timerId =  setTimeout(()=>{   
+              editorSocket.emit("writeFile",{
+                data:editorContent,
+                pathToFileOrFolder:activeFileTab.path
+              })
+      },2000)
+  }
 
   useEffect(()=>{
       downloadTheme()
@@ -70,6 +65,7 @@ const EditorComponent = () => {
             fontFamily: "monospace"
             
         }}
+        onChange={handleChange}
         value={activeFileTab?.value ? activeFileTab.value : '//Welcome to Playground'}
       />}
  

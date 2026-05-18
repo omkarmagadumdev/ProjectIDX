@@ -11,27 +11,50 @@ import { io } from 'socket.io-client'
 const ProjectPlayground = ()=>{
     
     const { projectId:projectIdFromUrl } = useParams();
-    const { projectId, setProjectId } = useTreeStructureStore();
+    const { projectId, setProjectId, setTreeStructure } = useTreeStructureStore();
 
     const { setEditorSocket } = useEditorSocketStore()
 
     useEffect(()=>{
-        
+        let editorSocketConnection;
+
+        let handleProjectTreeUpdated;
 
         if(projectIdFromUrl){
             setProjectId(projectIdFromUrl);
-          const editorSocketConnection = io(`${import.meta.env.VITE_BACKEND_URL}/editor`,{
+          editorSocketConnection = io(`${import.meta.env.VITE_BACKEND_URL}/editor`,{
                 query:{
                     projectId:projectIdFromUrl
                 }
             })
             console.log('ProjectPlayground: created editor socket', editorSocketConnection)
+
+            handleProjectTreeUpdated = (payload) => {
+                console.log('projectTreeUpdated received', payload);
+                try{ setTreeStructure() }catch(e){ console.warn('setTreeStructure failed', e) }
+            }
+
+            editorSocketConnection.on('projectTreeUpdated', handleProjectTreeUpdated);
+
             setEditorSocket(editorSocketConnection)
         }
 
-        
+        return ()=>{
+            // disconnect socket when leaving the playground
+            try{
+                if(editorSocketConnection && handleProjectTreeUpdated){
+                    editorSocketConnection.off('projectTreeUpdated', handleProjectTreeUpdated);
+                }
+                if(editorSocketConnection && typeof editorSocketConnection.disconnect === 'function'){
+                    editorSocketConnection.disconnect();
+                }
+                setEditorSocket(null)
+            }catch(e){}
+        }
 
-    },[setProjectId,projectIdFromUrl,setEditorSocket])
+
+
+            },[setProjectId,projectIdFromUrl,setEditorSocket,setTreeStructure])
 
 
     return(

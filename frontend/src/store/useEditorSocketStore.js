@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { useActiveFileTabStore } from "./useActiveFileTabStore";
+import { useTreeStructureStore } from "./treeStructureStore";
 
 
 export const useEditorSocketStore = create((set)=>({
@@ -8,9 +9,7 @@ export const useEditorSocketStore = create((set)=>({
 
 
             const activeFileTabSetter = useActiveFileTabStore.getState().setActiveFileTab;
-           
-
-
+            const projectTreeStructureSetter = useTreeStructureStore.getState().setTreeStructure
 
            incomingSocket?.on("readFileSuccess",  (data) => {
              console.log("read file succcess", data);
@@ -22,9 +21,13 @@ export const useEditorSocketStore = create((set)=>({
                 incomingSocket.emit("readfile",{
                     pathToFileOrFolder:data.path
                 })
-                
             })
-
+            
+            incomingSocket?.on("deleteFileSuccess",()=>{
+                console.log("Delete file Success");
+                
+                projectTreeStructureSetter()
+            })
 
         set({
             editorSocket:incomingSocket

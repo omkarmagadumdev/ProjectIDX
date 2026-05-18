@@ -3,6 +3,7 @@ import { GoChevronRight } from "react-icons/go";
 import { GoChevronDown } from "react-icons/go";
 import FileIcon from '../../atoms/Fileicon/FileIcon';
 import { useEditorSocketStore } from "../../../store/useEditorSocketStore";
+import { useFileContextMenuStore } from "../../../store/fileContextMenuStore";
 
 
 export const TreeNode = ({
@@ -11,9 +12,23 @@ export const TreeNode = ({
      const [ visibility,setVisibility ] = useState({})
     const {editorSocket} = useEditorSocketStore()
 
+
+    const { 
+        setX:setFileContextMenuX,
+        setY:setFileContextManuY,
+        setIsOpen:setFileContextManuIsOpen,
+        setFile,
+        setIsFolder
+    } = useFileContextMenuStore()
+        
+
+
+
     if (!fileFolderData) return null;
 
-    const hasChildren = Array.isArray(fileFolderData.children) && fileFolderData.children.length > 0;
+    // A node is a folder if it has a children array, even when it's empty.
+    const isFolderNode = Array.isArray(fileFolderData.children);
+    const hasChildren = isFolderNode && fileFolderData.children.length > 0;
 
     function toggleVisiblity(name){
         setVisibility({
@@ -42,6 +57,16 @@ export const TreeNode = ({
         })
 
     }
+
+    function handleContextMenuForFiles(e,path,isFolder){
+        e.preventDefault();
+        console.log('Right Clicked on',path,e,'isFolder:',isFolder);
+        setFile(path);
+        if(typeof setIsFolder === 'function') setIsFolder(Boolean(isFolder));
+        setFileContextMenuX(e.clientX)
+        setFileContextManuY(e.clientY)
+        setFileContextManuIsOpen(true)
+    }
     
     return(
        <div 
@@ -50,10 +75,11 @@ export const TreeNode = ({
             color:"white"
         }}
         >
-            { hasChildren ? (
+            { isFolderNode ? (
                 <div>
                <button 
                onClick={()=> toggleVisiblity(fileFolderData.name)}
+               onContextMenu={(e)=> handleContextMenuForFiles(e,fileFolderData.path, true)}
                style={{
                 border:'none',
                 outline:'none',
@@ -89,13 +115,15 @@ export const TreeNode = ({
                     color:'white'
                 }}
                 onDoubleClick={()=>handleOnDoubleClick(fileFolderData)}
+                onContextMenu={(e)=> handleContextMenuForFiles(e,fileFolderData.path, false)}
                 >
                     
                     {fileFolderData.name}
                 </p>
                 </div>
+
             )}
-            {visibility[fileFolderData.name] && fileFolderData.children && (
+            {visibility[fileFolderData.name] && hasChildren && (
                 <div style={{ paddingLeft: '14px' }}>
                 {fileFolderData.children.map((child)=>
                     <TreeNode 

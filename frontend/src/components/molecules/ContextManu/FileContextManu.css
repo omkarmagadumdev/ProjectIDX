@@ -1,0 +1,32 @@
+.file-context-menu {
+	position: fixed;
+	min-width: 140px;
+	background: #ffffff;
+	border: 1px solid #d0d7de;
+	border-radius: 8px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+	padding: 8px;
+	z-index: 1000;
+}
+
+.file-context-menu button {
+	width: 100%;
+	display: block;
+	padding: 8px 10px;
+	border: 0;
+	border-radius: 6px;
+	background: #f6f8fa;
+	color: #24292f;
+	text-align: left;
+	font-size: 14px;
+	cursor: pointer;
+	margin: 0 0 6px;
+}
+
+.file-context-menu button:last-child {
+	margin-bottom: 0;
+}
+
+.file-context-menu button:hover {
+	background: #eaeef2;
+}

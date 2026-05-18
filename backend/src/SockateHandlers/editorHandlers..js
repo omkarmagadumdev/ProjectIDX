@@ -2,14 +2,38 @@ import fs, { readFile } from 'fs/promises'
 
 export const handleEditorSocketEvents = (socket,editorNamespace)=>{
 
+    const getProjectId = () => socket.data?.projectId || socket.handshake?.query?.projectId || socket.handshake?.auth?.projectId;
+
+    const emitToProjectRoom = (eventName, payload, includeSender = true) => {
+        const projectId = getProjectId();
+        if (editorNamespace && projectId) {
+            if (includeSender) {
+                editorNamespace.to(projectId).emit(eventName, payload);
+            } else {
+                socket.to(projectId).emit(eventName, payload);
+            }
+            return;
+        }
+        socket.emit(eventName, payload);
+    };
+
+    const emitTreeUpdated = () => {
+        try {
+            const projectId = getProjectId();
+            emitToProjectRoom('projectTreeUpdated', { projectId }, true);
+        } catch (e) {
+            console.warn('Error broadcasting projectTreeUpdated', e);
+        }
+    }
+
 
     socket.on("writeFile",async({ data,pathToFileOrFolder })=>{
         try{
             const response = await fs.writeFile(pathToFileOrFolder,data);
-            editorNamespace?.emit("writeFileSuccess",{
+            emitToProjectRoom("writeFileSuccess",{
                 data:"File Written Successfully",
                 path:pathToFileOrFolder
-            })
+            }, true)
         }
         catch(error){
             console.log("Error Writing the File",error);
@@ -24,10 +48,13 @@ export const handleEditorSocketEvents = (socket,editorNamespace)=>{
 
     
     socket.on('createfile', async ({ pathToFileOrFolder })=>{
+        let exists = false;
+        try{
+            await fs.stat(pathToFileOrFolder);
+            exists = true;
+        }catch(e){ exists = false }
 
-        const isFileAlreadyPresent = await fs.stat(pathToFileOrFolder);
-
-        if(isFileAlreadyPresent){
+        if(exists){
             socket.emit('error',{
                 data:"File already Exists"
             })
@@ -39,6 +66,7 @@ export const handleEditorSocketEvents = (socket,editorNamespace)=>{
                 socket.emit("createFileSuccess",{
                     data:'File Created Successfully'
                 })
+                emitTreeUpdated();
         }
         catch(error){
             console.log("Error Writing a fileOofolder",error);
@@ -77,6 +105,7 @@ export const handleEditorSocketEvents = (socket,editorNamespace)=>{
                 socket.emit("deleteFileSuccess",{
                     data:"File Deleted succesfully"
                 })
+                emitTreeUpdated();
             } catch (error) {
                 console.log("Error Deleting The File",error);
                 socket.emit("errorDeleting",{
@@ -92,6 +121,7 @@ export const handleEditorSocketEvents = (socket,editorNamespace)=>{
             socket.emit("FolderCreatedSuccess",{
                 data:"Folder Created succesfully"
             })
+            emitTreeUpdated();
         } catch (error) {
             console.log("Error Creating folder",error);
             socket.emit('ErrorCereatingFolder',{
@@ -101,17 +131,32 @@ export const handleEditorSocketEvents = (socket,editorNamespace)=>{
     });
 
     socket.on("deletingFolder", async ({ pathToFileOrFolder })=>{
+        console.log("deletingFolder event received with path:", pathToFileOrFolder);
         try {
-            const response = await fs.rmdir(pathToFileOrFolder,{ recursive:true });
+            const response = await fs.rm(pathToFileOrFolder,{ recursive:true, force:true });
             socket.emit("deletingFolderSuccess",{
                 data:"Folder deleted Successfully"
             })
+            emitTreeUpdated();
         } catch (error) {
             console.log("Error deleting folder",error);
             socket.emit("ErrorDeletingfolder",{
                 data:'Error deleting folder'
             })
             
+        }
+    })
+
+    // rename handler
+    socket.on('rename', async ({ oldPath, newPath }) => {
+        console.log('rename event received', { oldPath, newPath });
+        try {
+            await fs.rename(oldPath, newPath);
+            socket.emit('renameSuccess', { oldPath, newPath });
+            emitTreeUpdated();
+        } catch (err) {
+            console.error('Error renaming', err);
+            socket.emit('renameError', { error: String(err) });
         }
     })
 }

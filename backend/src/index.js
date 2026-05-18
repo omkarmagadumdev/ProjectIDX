@@ -30,8 +30,13 @@ const editorNamespace = io.of('/editor');
 
 
 editorNamespace.on('connection', (socket) => {
-    console.log('Editor socket connected', socket.id);
-    handleEditorSocketEvents(socket,editorNamespace);
+    const projectId = socket.handshake?.query?.projectId || socket.handshake?.auth?.projectId;
+    if (projectId) {
+        socket.data.projectId = projectId;
+        socket.join(projectId);
+    }
+    console.log('Editor socket connected', socket.id, 'projectId:', projectId);
+    handleEditorSocketEvents(socket, editorNamespace);
 });
 
 server.listen(PORT,()=>{

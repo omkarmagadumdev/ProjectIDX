@@ -81,7 +81,7 @@ export const handleEditorSocketEvents = (socket,editorNamespace)=>{
         console.log("readfile event received with path:", pathToFileOrFolder);
         try {
             const response = await readFile(pathToFileOrFolder);
-            console.log("File contents:", response.toString());
+            // console.log("File contents:", response.toString());
             
             socket.emit("readFileSuccess",{
                 value:response.toString(),

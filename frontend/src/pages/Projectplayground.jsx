@@ -6,6 +6,7 @@ import { useEffect } from "react"
 import { useTreeStructureStore } from "../store/treeStructureStore.js"
 import { useEditorSocketStore } from "../store/useEditorSocketStore.js"
 import { io } from 'socket.io-client'
+import BrowserTerminal from "../components/molecules/Terminal/BrowserTerminal.jsx"
 
 
 const ProjectPlayground = ()=>{
@@ -87,6 +88,7 @@ const ProjectPlayground = ()=>{
             </div>
             <EditorButton isActive={true}/>
             <EditorButton isActive={false}/>
+            <BrowserTerminal/>
         </>
     )
 }

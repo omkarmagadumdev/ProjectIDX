@@ -2,13 +2,10 @@ import React, { useEffect, useRef } from 'react'
 import { Terminal } from 'xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import 'xterm/css/xterm.css'
-import { io } from 'socket.io-client'
-import { useParams } from 'react-router-dom'
+import { io } from 'https://cdn.socket.io/4.8.3/socket.io.esm.min.js'
 
 const BrowserTerminal = () => {
   const terminalRef = useRef(null)
-  const socket = useRef(null)
-  const { projectId:projectIdFromUrl } = useParams();
 
   useEffect(()=>{
 
@@ -58,19 +55,21 @@ const BrowserTerminal = () => {
       }
       window.addEventListener('resize', handleResize)
 
-      socket.current = io(`${import.meta.env.VITE_BACKEND_URL}/terminal`,{
-        query:{
-          projectId:'projectIdFromUrl'
-        }
+      const socket = io('http://localhost:3000/shell', {
+        transports: ['websocket'],
       })
 
-      socket.current.on('shell-output',(data)=>{
+      socket.on('connect', () => {
+        console.log('browser connect')
+      })
+
+      socket.on('shell-output',(data)=>{
           term.write(data)
       })
 
       term.onData((data)=>{
         console.log(data);
-        socket.current.emit('shell-input',data)
+        socket.emit('shell-input',data)
         
       })
 
@@ -79,7 +78,7 @@ const BrowserTerminal = () => {
         window.removeEventListener('resize', handleResize)
         try { 
           term.dispose() 
-          socket.current.disconnect()
+          socket.disconnect()
         } catch (e) {}
       }
 

@@ -5,6 +5,7 @@ import apiRouter from './routes/index.js'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import { handleEditorSocketEvents } from './SockateHandlers/editorHandlers..js'
+import {handleCreateContainer} from './containers/handleCreateContainers.js';
 
 const app = express();
 
@@ -48,20 +49,21 @@ const terminalNamespace = io.of('/shell');
 
 terminalNamespace.on("connection",(socket)=>{
     console.log("terminal connected");
+    const projectId = socket.handshake?.query?.projectId || socket.handshake?.auth?.projectId;
 
-    socket.on("shell-input",(data)=>{
-        console.log("input recieved",data);
-        terminalNamespace.emit('shell-output',data)
+
+    // socket.on("shell-input",(data)=>{
+    //     console.log("input recieved",data);
+    //     terminalNamespace.emit('shell-output',data)
         
-    })
+    // })
 
     socket.on("disconnect",()=>{
         console.log("terminal disconnected");
         
     })
 
-
-    
+    handleCreateContainer({socket,projectId})
 })
 
 server.listen(PORT,()=>{

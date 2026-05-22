@@ -12,9 +12,12 @@ export const createProjectService = async () => {
 
     await mkdir(`./projects/${projectId}`)
 
-    const response = await execPromisified(REACT_PROJECT_COMMOND,{ 
-        cwd:`./projects/${projectId}`
-     })
+    // Run project scaffolding command in background so HTTP request doesn't hang.
+    if (REACT_PROJECT_COMMOND) {
+        execPromisified(REACT_PROJECT_COMMOND, { cwd: `./projects/${projectId}` })
+            .then((r) => console.log('scaffold finished', r))
+            .catch((err) => console.error('scaffold error', err));
+    }
 
     return projectId;
 

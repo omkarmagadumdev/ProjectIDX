@@ -3,9 +3,11 @@ import { Terminal } from 'xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import 'xterm/css/xterm.css'
 import { io } from 'https://cdn.socket.io/4.8.3/socket.io.esm.min.js'
+import { useParams } from 'react-router-dom'
 
 const BrowserTerminal = () => {
   const terminalRef = useRef(null)
+  const { projectId:projectIdFromUrl } = useParams();
 
   useEffect(()=>{
 
@@ -57,6 +59,7 @@ const BrowserTerminal = () => {
 
       const socket = io('http://localhost:3000/shell', {
         transports: ['websocket'],
+        query: { projectId: projectIdFromUrl }
       })
 
       socket.on('connect', () => {

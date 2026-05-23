@@ -61,7 +61,7 @@ const EditorComponent = () => {
         onMount={handleOnMount}
         options={{
             fontSize: 18,
-            fontFamily: "monospace"
+          fontFamily: "Fira Code, monospace"
             
         }}
         language={extensionToFileType(activeFileTab?.extension)}

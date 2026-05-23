@@ -13,6 +13,7 @@
     "@ant-design/icons": "^6.2.2",
     "@monaco-editor/react": "^4.7.0",
     "@tanstack/react-query": "^5.100.9",
+    "@xterm/addon-attach": "^0.12.0",
     "@xterm/addon-fit": "^0.11.0",
     "antd": "^6.3.7",
     "axios": "^1.16.0",

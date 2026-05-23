@@ -2,11 +2,12 @@ import React, { useEffect, useRef } from 'react'
 import { Terminal } from 'xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import 'xterm/css/xterm.css'
-import { io } from 'https://cdn.socket.io/4.8.3/socket.io.esm.min.js'
 import { useParams } from 'react-router-dom'
+import { AttachAddon } from '@xterm/addon-attach'
 
 const BrowserTerminal = () => {
   const terminalRef = useRef(null)
+  const socket = useRef(null)
   const { projectId:projectIdFromUrl } = useParams();
 
   useEffect(()=>{
@@ -40,7 +41,7 @@ const BrowserTerminal = () => {
           brightWhite: "#ffffff",
         },
         fontSize: 16,
-        fontFamily: 'Ubuntu',
+        fontFamily: 'Fira Code, monospace',
         convertEol: true
       });
       const fitAddon = new FitAddon()
@@ -57,31 +58,28 @@ const BrowserTerminal = () => {
       }
       window.addEventListener('resize', handleResize)
 
-      const socket = io('http://localhost:3000/shell', {
-        transports: ['websocket'],
-        query: { projectId: projectIdFromUrl }
-      })
+      // const socket = io('http://localhost:3000/shell', {
+      //   transports: ['websocket'],
+      //   query: { projectId: projectIdFromUrl }
+      // })
 
-      socket.on('connect', () => {
-        console.log('browser connect')
-      })
+      socket.current = new WebSocket("ws://localhost:3000/terminal?projectId="+projectIdFromUrl)
 
-      socket.on('shell-output',(data)=>{
-          term.write(data)
-      })
-
-      term.onData((data)=>{
-        console.log(data);
-        socket.emit('shell-input',data)
+      socket.current.onopen = ()=>{
+        const attchAddon = new AttachAddon(socket.current);
+        term.loadAddon(attchAddon);
+        socket.current = ws;
         
-      })
+      }
 
 
       return () => {
         window.removeEventListener('resize', handleResize)
-        try { 
-          term.dispose() 
-          socket.disconnect()
+        try {
+          term.dispose()
+        } catch (e) {}
+        try {
+          if (socket.current) socket.current.close()
         } catch (e) {}
       }
 

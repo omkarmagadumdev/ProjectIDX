@@ -6,6 +6,8 @@ import { createServer } from 'http'
 import { Server } from 'socket.io'
 import { handleEditorSocketEvents } from './SockateHandlers/editorHandlers..js'
 import {handleCreateContainer} from './containers/handleCreateContainers.js';
+import WebSocket, { WebSocketServer } from 'ws';
+// import { Container } from 'dockerode';
 
 const app = express();
 
@@ -45,31 +47,45 @@ editorNamespace.on('connection', (socket) => {
     handleEditorSocketEvents(socket, editorNamespace);
 });
 
-const terminalNamespace = io.of('/shell');
 
-terminalNamespace.on("connection",(socket)=>{
-    console.log("terminal connected");
-    const projectId = socket.handshake?.query?.projectId || socket.handshake?.auth?.projectId;
-
-
-    // socket.on("shell-input",(data)=>{
-    //     console.log("input recieved",data);
-    //     terminalNamespace.emit('shell-output',data)
-        
-    // })
-
-    socket.on("disconnect",()=>{
-        console.log("terminal disconnected");
-        
-    })
-
-    handleCreateContainer({socket,projectId})
-})
 
 server.listen(PORT,()=>{
     console.log(`server is running on the following port ${PORT} `);
 })
 
+const webSocketForTerminal = new WebSocketServer({
+    noServer:true
+})
+
+
+server.on('upgrade',(req,tcpsocket,head)=>{
+    // this call will be called when client tries to connect to the server through websocket
+    const idTerminal =  req.url.includes('/terminal');
+
+    if(idTerminal){
+        console.log("Request url recived",req.url);
+        const projectId = req.url.split('=')[1]
+        console.log("project id recived after connect",projectId);
+        
+        handleCreateContainer(projectId,webSocketForTerminal,req,tcpsocket,head)
+    }
+    
+})
+webSocketForTerminal.on('connection',(ws,req,conatiner)=>{
+        console.log("terminal connected",ws,req,conatiner);
+        handleTerminaCreation(conatiner,ws)
+        ws.on("close",()=>{
+            conatiner.remove({ force:true },(err,data)=>{
+                if(err){
+                    console.log("Error while removing conatiner",err);
+                    
+                }
+                console.log("Container removed",data);
+                
+            })
+        })
+        
+})
 process.on('uncaughtException', (err) => {
     console.error('uncaughtException', err);
 });
@@ -77,3 +93,4 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason) => {
     console.error('unhandledRejection', reason);
 });
+

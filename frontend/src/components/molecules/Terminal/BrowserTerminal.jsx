@@ -4,11 +4,14 @@ import { FitAddon } from '@xterm/addon-fit'
 import 'xterm/css/xterm.css'
 import { useParams } from 'react-router-dom'
 import { AttachAddon } from '@xterm/addon-attach'
+import { useTerminalSocketStore } from '../../../store/terminalSocketStore'
 
 const BrowserTerminal = () => {
   const terminalRef = useRef(null)
   const socket = useRef(null)
-  const { projectId:projectIdFromUrl } = useParams();
+  const { projectId:projectIdFromUrl } = useParams(); 
+
+  const { terminalSocket } = useTerminalSocketStore()
 
   useEffect(()=>{
 
@@ -44,6 +47,7 @@ const BrowserTerminal = () => {
         fontFamily: 'Fira Code, monospace',
         convertEol: true
       });
+
       const fitAddon = new FitAddon()
       term.loadAddon(fitAddon)
 
@@ -63,13 +67,16 @@ const BrowserTerminal = () => {
       //   query: { projectId: projectIdFromUrl }
       // })
 
-      socket.current = new WebSocket("ws://localhost:3000/terminal?projectId="+projectIdFromUrl)
 
-      socket.current.onopen = ()=>{
-        const attchAddon = new AttachAddon(socket.current);
-        term.loadAddon(attchAddon);
-        socket.current = ws;
-        
+      if (!terminalSocket) return
+
+      // keep a ref to the active socket
+      socket.current = terminalSocket
+
+      // WebSocket uses `onopen` (lowercase)
+      terminalSocket.onopen = () => {
+        const attchAddon = new AttachAddon(terminalSocket)
+        term.loadAddon(attchAddon)
       }
 
 
@@ -86,7 +93,7 @@ const BrowserTerminal = () => {
 
 
 
-  },[])
+  },[terminalSocket])
 
 
   return (

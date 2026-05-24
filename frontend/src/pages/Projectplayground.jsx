@@ -7,6 +7,7 @@ import { useTreeStructureStore } from "../store/treeStructureStore.js"
 import { useEditorSocketStore } from "../store/useEditorSocketStore.js"
 import { io } from 'socket.io-client'
 import BrowserTerminal from "../components/molecules/Terminal/BrowserTerminal.jsx"
+import { useTerminalSocketStore } from "../store/terminalSocketStore.js"
 
 
 const ProjectPlayground = ()=>{
@@ -14,7 +15,12 @@ const ProjectPlayground = ()=>{
     const { projectId:projectIdFromUrl } = useParams();
     const { projectId, setProjectId, setTreeStructure } = useTreeStructureStore();
 
-    const { setEditorSocket } = useEditorSocketStore()
+    const { setEditorSocket } = useEditorSocketStore();
+    const { setTerminalSocket } = useTerminalSocketStore()
+
+    
+    
+
 
     useEffect(()=>{
         let editorSocketConnection;
@@ -28,6 +34,7 @@ const ProjectPlayground = ()=>{
                     projectId:projectIdFromUrl
                 }
             })
+
             console.log('ProjectPlayground: created editor socket', editorSocketConnection)
 
             handleProjectTreeUpdated = (payload) => {
@@ -36,6 +43,10 @@ const ProjectPlayground = ()=>{
             }
 
             editorSocketConnection.on('projectTreeUpdated', handleProjectTreeUpdated);
+
+            const ws= new WebSocket("ws://localhost:3000/terminal?projectId="+projectIdFromUrl);
+            
+            setTerminalSocket(ws)
 
             setEditorSocket(editorSocketConnection)
         }
@@ -55,7 +66,7 @@ const ProjectPlayground = ()=>{
 
 
 
-            },[setProjectId,projectIdFromUrl,setEditorSocket,setTreeStructure])
+            },[setProjectId,projectIdFromUrl,setEditorSocket,setTreeStructure,setTerminalSocket])
 
 
     return(

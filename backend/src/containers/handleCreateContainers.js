@@ -12,7 +12,6 @@ export const handleCreateContainer = async ( projectId, terminalSocket,req,tcpso
       AttachStderr: true,
       Cmd: ["/bin/bash"],
       Tty: true,
-      User: "sandbox",
       ExposedPorts: {
         "5173/tcp": {},
       },

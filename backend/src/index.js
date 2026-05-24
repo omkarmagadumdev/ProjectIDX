@@ -6,6 +6,7 @@ import { createServer } from 'http'
 import { Server } from 'socket.io'
 import { handleEditorSocketEvents } from './SockateHandlers/editorHandlers..js'
 import {handleCreateContainer} from './containers/handleCreateContainers.js';
+import { handleTerminalCreation } from './containers/handleTerminalCreation.js';
 import WebSocket, { WebSocketServer } from 'ws';
 // import { Container } from 'dockerode';
 
@@ -49,9 +50,36 @@ editorNamespace.on('connection', (socket) => {
 
 
 
-server.listen(PORT,()=>{
-    console.log(`server is running on the following port ${PORT} `);
-})
+// Try to listen on the configured PORT, and if it's in use try subsequent ports
+const MAX_PORT_ATTEMPTS = 10;
+let attempted = 0;
+let currentPort = Number(PORT) || 3000;
+
+function startServer(port) {
+    attempted += 1;
+    server.listen(port, () => {
+        console.log(`server is running on the following port ${port}`);
+    });
+
+    server.once('error', (err) => {
+        if (err && err.code === 'EADDRINUSE') {
+            console.warn(`Port ${port} is already in use. Attempt ${attempted}/${MAX_PORT_ATTEMPTS}.`);
+            if (attempted < MAX_PORT_ATTEMPTS) {
+                // remove the error listener and try next port
+                server.removeAllListeners('error');
+                currentPort = port + 1;
+                startServer(currentPort);
+                return;
+            }
+            console.error(`All ${MAX_PORT_ATTEMPTS} port attempts failed. Exiting.`);
+            process.exit(1);
+        }
+        console.error('Server error', err);
+        process.exit(1);
+    });
+}
+
+startServer(currentPort);
 
 const webSocketForTerminal = new WebSocketServer({
     noServer:true
@@ -63,17 +91,22 @@ server.on('upgrade',(req,tcpsocket,head)=>{
     const idTerminal =  req.url.includes('/terminal');
 
     if(idTerminal){
-        console.log("Request url recived",req.url);
-        const projectId = req.url.split('=')[1]
-        console.log("project id recived after connect",projectId);
-        
-        handleCreateContainer(projectId,webSocketForTerminal,req,tcpsocket,head)
+        console.log("Request url received", req.url);
+        try{
+            // parse projectId robustly from upgrade request URL
+            const parsed = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+            const projectId = parsed.searchParams.get('projectId');
+            console.log("project id received after connect", projectId);
+            handleCreateContainer(projectId, webSocketForTerminal, req, tcpsocket, head);
+        }catch(err){
+            console.error('failed to parse upgrade request url', err, req.url);
+        }
     }
     
 })
 webSocketForTerminal.on('connection',(ws,req,conatiner)=>{
-        console.log("terminal connected",ws,req,conatiner);
-        handleTerminaCreation(conatiner,ws)
+        console.log("terminal connected");
+        handleTerminalCreation(conatiner,ws)
         ws.on("close",()=>{
             conatiner.remove({ force:true },(err,data)=>{
                 if(err){

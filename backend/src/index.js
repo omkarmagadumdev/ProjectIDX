@@ -1,14 +1,13 @@
 import express from 'express';
 import cors from 'cors';
-import  { PORT  } from './config/serverConfig.js'
+import { PORT } from './config/serverConfig.js'
 import apiRouter from './routes/index.js'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import { handleEditorSocketEvents } from './SockateHandlers/editorHandlers..js'
-import {handleCreateContainer} from './containers/handleCreateContainers.js';
+import { handleCreateContainer } from './containers/handleCreateContainers.js';
 import { handleTerminalCreation } from './containers/handleTerminalCreation.js';
 import WebSocket, { WebSocketServer } from 'ws';
-// import { Container } from 'dockerode';
 
 const app = express();
 
@@ -22,11 +21,11 @@ app.use((req, res, next) => {
     next();
 });
 
-app.get('/ping',(req,res)=>{
-    return res.json({ message:"pong" })
+app.get('/ping', (req, res) => {
+    return res.json({ message: "pong" })
 })
 
-app.use('/api',apiRouter)
+app.use('/api', apiRouter)
 
 const server = createServer(app);
 
@@ -47,7 +46,6 @@ editorNamespace.on('connection', (socket) => {
     console.log('Editor socket connected', socket.id, 'projectId:', projectId);
     handleEditorSocketEvents(socket, editorNamespace);
 });
-
 
 
 // Try to listen on the configured PORT, and if it's in use try subsequent ports
@@ -82,42 +80,46 @@ function startServer(port) {
 startServer(currentPort);
 
 const webSocketForTerminal = new WebSocketServer({
-    noServer:true
+    noServer: true
 })
 
 
-server.on('upgrade',(req,tcpsocket,head)=>{
+server.on('upgrade', (req, tcpsocket, head) => {
     // this call will be called when client tries to connect to the server through websocket
-    const idTerminal =  req.url.includes('/terminal');
+    const idTerminal = req.url.includes('/terminal');
 
-    if(idTerminal){
+    if (idTerminal) {
         console.log("Request url received", req.url);
-        try{
+        try {
             // parse projectId robustly from upgrade request URL
             const parsed = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
             const projectId = parsed.searchParams.get('projectId');
             console.log("project id received after connect", projectId);
-            handleCreateContainer(projectId, webSocketForTerminal, req, tcpsocket, head);
-        }catch(err){
+
+            webSocketForTerminal.handleUpgrade(req, tcpsocket, head, async (establishedWSConn) => {
+                try {
+                    const container = await handleCreateContainer(projectId);
+                    if (!container) {
+                        console.log('No container available for terminal connection', { projectId });
+                        try { establishedWSConn.close(); } catch (closeErr) {}
+                        return;
+                    }
+                    console.log('terminal connected', { projectId, url: req.url });
+                    handleTerminalCreation(container, establishedWSConn);
+
+                    establishedWSConn.on('close', () => {
+                        console.log('terminal websocket closed', { projectId, containerId: container.id });
+                    });
+                } catch (err) {
+                    console.error('failed to create terminal container', err);
+                    try { establishedWSConn.close(); } catch (closeErr) {}
+                }
+            });
+        } catch (err) {
             console.error('failed to parse upgrade request url', err, req.url);
         }
     }
-    
-})
-webSocketForTerminal.on('connection',(ws,req,conatiner)=>{
-        console.log("terminal connected");
-        handleTerminalCreation(conatiner,ws)
-        ws.on("close",()=>{
-            conatiner.remove({ force:true },(err,data)=>{
-                if(err){
-                    console.log("Error while removing conatiner",err);
-                    
-                }
-                console.log("Container removed",data);
-                
-            })
-        })
-        
+
 })
 process.on('uncaughtException', (err) => {
     console.error('uncaughtException', err);
@@ -126,4 +128,3 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason) => {
     console.error('unhandledRejection', reason);
 });
-

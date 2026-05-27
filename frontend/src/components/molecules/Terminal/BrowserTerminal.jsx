@@ -62,26 +62,36 @@ const BrowserTerminal = () => {
       }
       window.addEventListener('resize', handleResize)
 
-      // const socket = io('http://localhost:3000/shell', {
-      //   transports: ['websocket'],
-      //   query: { projectId: projectIdFromUrl }
-      // })
+      let attachAddon = null
+      const attachTerminal = () => {
+        if (!terminalSocket || attachAddon) {
+          return
+        }
+        attachAddon = new AttachAddon(terminalSocket)
+        term.loadAddon(attachAddon)
+      }
 
+      if (terminalSocket) {
+        socket.current = terminalSocket
 
-      if (!terminalSocket) return
-
-      // keep a ref to the active socket
-      socket.current = terminalSocket
-
-      // WebSocket uses `onopen` (lowercase)
-      terminalSocket.onopen = () => {
-        const attchAddon = new AttachAddon(terminalSocket)
-        term.loadAddon(attchAddon)
+        if (terminalSocket.readyState === WebSocket.OPEN) {
+          attachTerminal()
+        } else {
+          terminalSocket.addEventListener('open', attachTerminal, { once: true })
+        }
       }
 
 
       return () => {
         window.removeEventListener('resize', handleResize)
+        if (terminalSocket) {
+          terminalSocket.removeEventListener('open', attachTerminal)
+        }
+        try {
+          if (attachAddon) {
+            attachAddon.dispose()
+          }
+        } catch (e) {}
         try {
           term.dispose()
         } catch (e) {}

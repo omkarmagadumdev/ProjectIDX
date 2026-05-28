@@ -4,6 +4,16 @@ import fs from 'fs'
 const docker = new Docker();
 const projectContainerCache = new Map();
 
+export const listContainer = async ()=>{
+      const containers = await docker.listContainers();
+      console.log("containers",containers);
+      containers.forEach((containersInfo)=>{
+        console.log(containersInfo.Ports);
+        
+      })
+      
+}
+
 export const handleCreateContainer = async ( projectId ) => {
   console.log("Project id recieved for conatiner create", projectId);
   if (!fs.existsSync('/var/run/docker.sock')) {

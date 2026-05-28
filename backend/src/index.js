@@ -5,7 +5,7 @@ import apiRouter from './routes/index.js'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import { handleEditorSocketEvents } from './SockateHandlers/editorHandlers..js'
-import { handleCreateContainer } from './containers/handleCreateContainers.js';
+import { handleCreateContainer, listContainer } from './containers/handleCreateContainers.js';
 import { handleTerminalCreation } from './containers/handleTerminalCreation.js';
 import WebSocket, { WebSocketServer } from 'ws';
 
@@ -44,6 +44,14 @@ editorNamespace.on('connection', (socket) => {
         socket.join(projectId);
     }
     console.log('Editor socket connected', socket.id, 'projectId:', projectId);
+
+    socket.on("getPort",()=>{
+        console.log("getPort event received");
+        listContainer()
+        
+    })
+
+
     handleEditorSocketEvents(socket, editorNamespace);
 });
 

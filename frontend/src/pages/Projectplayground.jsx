@@ -15,15 +15,16 @@ const ProjectPlayground = ()=>{
     const { projectId:projectIdFromUrl } = useParams();
     const { projectId, setProjectId, setTreeStructure } = useTreeStructureStore();
 
-    const { setEditorSocket } = useEditorSocketStore();
-    const { setTerminalSocket, terminalSocket} = useTerminalSocketStore()
+    const { setEditorSocket, editorSocket} = useEditorSocketStore();
+    const { setTerminalSocket} = useTerminalSocketStore()
         const backendUrl = import.meta.env.VITE_BACKEND_URL || window.location.origin;
 
     function fetchPort(){
-            if (terminalSocket && terminalSocket.readyState === WebSocket.OPEN) {
-            terminalSocket.send("getPort")
-            }
-            
+        console.log(editorSocket);
+        
+           editorSocket.emit("getPort");
+           console.log("fetching port");
+           
     }
 
     useEffect(()=>{

@@ -4,7 +4,7 @@ FROM ubuntu:20.04
 RUN useradd -ms /bin/bash sandbox
 
 # steup working dir
-WorkDIR /home/sandbox
+WORKDIR /home/sandbox
 
 # update the ubunut machine
 RUN apt update && apt upgrade -y
@@ -13,7 +13,7 @@ RUN apt update && apt upgrade -y
 RUN apt install nano curl -y
 
 # install node js
-Run curl -fsSL https://nodesource.com | bash - && \
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y nodejs
 
 # configuring terminal to display current working dir

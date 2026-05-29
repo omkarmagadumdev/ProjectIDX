@@ -5,7 +5,6 @@ export const EditorButton = ( { isActive  } )=>{
     function handleOnClick(){
 
     }
-    
     return(
         <button className='editor-button'
             style={{

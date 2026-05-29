@@ -2,10 +2,16 @@ import React, { useEffect, useRef } from 'react'
 import { Terminal } from 'xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import 'xterm/css/xterm.css'
-import { io } from 'https://cdn.socket.io/4.8.3/socket.io.esm.min.js'
+import { useParams } from 'react-router-dom'
+import { AttachAddon } from '@xterm/addon-attach'
+import { useTerminalSocketStore } from '../../../store/terminalSocketStore'
 
 const BrowserTerminal = () => {
   const terminalRef = useRef(null)
+  const socket = useRef(null)
+  const { projectId:projectIdFromUrl } = useParams(); 
+
+  const { terminalSocket } = useTerminalSocketStore()
 
   useEffect(()=>{
 
@@ -38,9 +44,10 @@ const BrowserTerminal = () => {
           brightWhite: "#ffffff",
         },
         fontSize: 16,
-        fontFamily: 'Ubuntu',
+        fontFamily: 'Fira Code, monospace',
         convertEol: true
       });
+
       const fitAddon = new FitAddon()
       term.loadAddon(fitAddon)
 
@@ -55,37 +62,48 @@ const BrowserTerminal = () => {
       }
       window.addEventListener('resize', handleResize)
 
-      const socket = io('http://localhost:3000/shell', {
-        transports: ['websocket'],
-      })
+      let attachAddon = null
+      const attachTerminal = () => {
+        if (!terminalSocket || attachAddon) {
+          return
+        }
+        attachAddon = new AttachAddon(terminalSocket)
+        term.loadAddon(attachAddon)
+      }
 
-      socket.on('connect', () => {
-        console.log('browser connect')
-      })
+      if (terminalSocket) {
+        socket.current = terminalSocket
 
-      socket.on('shell-output',(data)=>{
-          term.write(data)
-      })
-
-      term.onData((data)=>{
-        console.log(data);
-        socket.emit('shell-input',data)
-        
-      })
+        if (terminalSocket.readyState === WebSocket.OPEN) {
+          attachTerminal()
+        } else {
+          terminalSocket.addEventListener('open', attachTerminal, { once: true })
+        }
+      }
 
 
       return () => {
         window.removeEventListener('resize', handleResize)
-        try { 
-          term.dispose() 
-          socket.disconnect()
+        if (terminalSocket) {
+          terminalSocket.removeEventListener('open', attachTerminal)
+        }
+        try {
+          if (attachAddon) {
+            attachAddon.dispose()
+          }
+        } catch (e) {}
+        try {
+          term.dispose()
+        } catch (e) {}
+        try {
+          if (socket.current) socket.current.close()
         } catch (e) {}
       }
 
 
 
 
-  },[])
+  },[terminalSocket])
 
 
   return (

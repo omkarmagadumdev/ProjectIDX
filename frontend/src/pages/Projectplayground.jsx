@@ -7,6 +7,7 @@ import { useTreeStructureStore } from "../store/treeStructureStore.js"
 import { useEditorSocketStore } from "../store/useEditorSocketStore.js"
 import { io } from 'socket.io-client'
 import BrowserTerminal from "../components/molecules/Terminal/BrowserTerminal.jsx"
+import { useTerminalSocketStore } from "../store/terminalSocketStore.js"
 
 
 const ProjectPlayground = ()=>{
@@ -14,7 +15,17 @@ const ProjectPlayground = ()=>{
     const { projectId:projectIdFromUrl } = useParams();
     const { projectId, setProjectId, setTreeStructure } = useTreeStructureStore();
 
-    const { setEditorSocket } = useEditorSocketStore()
+    const { setEditorSocket, editorSocket} = useEditorSocketStore();
+    const { setTerminalSocket} = useTerminalSocketStore()
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || window.location.origin;
+
+    function fetchPort(){
+        console.log(editorSocket);
+        
+           editorSocket.emit("getPort");
+           console.log("fetching port");
+           
+    }
 
     useEffect(()=>{
         let editorSocketConnection;
@@ -28,6 +39,7 @@ const ProjectPlayground = ()=>{
                     projectId:projectIdFromUrl
                 }
             })
+
             console.log('ProjectPlayground: created editor socket', editorSocketConnection)
 
             handleProjectTreeUpdated = (payload) => {
@@ -36,6 +48,11 @@ const ProjectPlayground = ()=>{
             }
 
             editorSocketConnection.on('projectTreeUpdated', handleProjectTreeUpdated);
+
+            const wsUrl = backendUrl.replace(/^http/, 'ws') + "/terminal?projectId=" + projectIdFromUrl;
+            const ws= new WebSocket(wsUrl);
+            
+            setTerminalSocket(ws)
 
             setEditorSocket(editorSocketConnection)
         }
@@ -49,13 +66,17 @@ const ProjectPlayground = ()=>{
                 if(editorSocketConnection && typeof editorSocketConnection.disconnect === 'function'){
                     editorSocketConnection.disconnect();
                 }
+                if(terminalSocket && typeof terminalSocket.close === 'function'){
+                    terminalSocket.close();
+                }
+                setTerminalSocket(null)
                 setEditorSocket(null)
             }catch(e){}
         }
 
 
 
-            },[setProjectId,projectIdFromUrl,setEditorSocket,setTreeStructure])
+            },[setProjectId,projectIdFromUrl,setEditorSocket,setTreeStructure,setTerminalSocket])
 
 
     return(
@@ -88,6 +109,13 @@ const ProjectPlayground = ()=>{
             </div>
             <EditorButton isActive={true}/>
             <EditorButton isActive={false}/>
+            <div>
+                <button
+                onClick={fetchPort}
+                >
+                    fetchport 
+                </button>
+            </div>
             <BrowserTerminal/>
         </>
     )

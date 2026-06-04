@@ -2,7 +2,7 @@ import Docker from "dockerode";
 import fs from 'fs'
 
 const docker = new Docker();
-const projectContainerCache = new Map();
+// const projectContainerCache = new Map();
 
 export const listContainer = async ()=>{
       const containers = await docker.listContainers();
@@ -21,26 +21,43 @@ export const handleCreateContainer = async ( projectId ) => {
     return null;
   }
 
+  
+
   try {
     await docker.ping();
 
-    const cachedContainer = projectContainerCache.get(projectId);
-    if (cachedContainer) {
-      try {
-        await cachedContainer.inspect();
-        console.log('Reusing existing container', cachedContainer.id);
-        return cachedContainer;
-      } catch (inspectError) {
-        projectContainerCache.delete(projectId);
-      }
+    const existingContainer = await docker.listContainers({
+      name:projectId
+    });
+
+    if(existingContainer.length > 0){
+        console.log("conatiner already exists, stopping and removing it");
+        const container =  docker.getContainer(existingContainer[0].Id) 
+        await container.stop();
+        await container.remove();
+        
     }
 
+    // const cachedContainer = projectContainerCache.get(projectId);
+    // if (cachedContainer) {
+    //   try {
+    //     await cachedContainer.inspect();
+    //     console.log('Reusing existing container', cachedContainer.id);
+    //     return cachedContainer;
+    //   } catch (inspectError) {
+    //     projectContainerCache.delete(projectId);
+    //   }
+    // }
+    
+    console.log("creating a new container");
+    
     const container = await docker.createContainer({
       Image: "sandbox",
       AttachStdin: true,
       AttachStdout: true,
       AttachStderr: true,
       Cmd: ["/bin/bash", "-i"],
+      name:projectId,
       Tty: true,
       ExposedPorts: {
         "5173/tcp": {},
@@ -64,7 +81,7 @@ export const handleCreateContainer = async ( projectId ) => {
     await container.start();
 
     console.log("conatiner started");
-    projectContainerCache.set(projectId, container);
+    // projectContainerCache.set(projectId, container);
 
     return container;
 

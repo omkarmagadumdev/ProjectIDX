@@ -33,15 +33,16 @@ export const CreateProject= () => {
     return (
       <div className="create-project-wrapper">
         <Layout className="create-project-layout">
-          <Header className="create-project-header">Header</Header>
+          
           <Content className="create-project-content">  
             <Button
             onClick={handleCreateProject}
             className="create-project-button"
             >
                 Create PlayGround
-            </Button></Content>
-          <Footer className="create-project-footer">Footer</Footer>
+            </Button>
+            </Content>
+          
         </Layout>
       </div>
     );

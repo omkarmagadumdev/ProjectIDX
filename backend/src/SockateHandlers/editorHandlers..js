@@ -1,4 +1,5 @@
 import fs, { readFile } from 'fs/promises'
+import { getContainerPort } from '../containers/handleCreateContainers.js';
 
 export const handleEditorSocketEvents = (socket,editorNamespace)=>{
 
@@ -158,5 +159,14 @@ export const handleEditorSocketEvents = (socket,editorNamespace)=>{
             console.error('Error renaming', err);
             socket.emit('renameError', { error: String(err) });
         }
+    })
+
+    socket.on("getPort",async({ containerName })=>{
+        const port = await getContainerPort(containerName);
+        console.log("port data",port);
+        socket.emit('getPortSuccess',{
+            port:port,
+        })
+        
     })
 }

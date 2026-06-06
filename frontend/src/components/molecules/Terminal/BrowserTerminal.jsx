@@ -53,8 +53,12 @@ const BrowserTerminal = () => {
 
       if (terminalRef.current) {
         term.open(terminalRef.current)
-        fitAddon.fit()
-        term.writeln('Welcome to the in-browser terminal')
+        try {
+          fitAddon.fit()
+        } catch (e) {}
+        try {
+          term.writeln('Welcome to the in-browser terminal')
+        } catch (e) {}
       }
 
       const handleResize = () => {

@@ -5,7 +5,7 @@ import apiRouter from './routes/index.js'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import { handleEditorSocketEvents } from './SockateHandlers/editorHandlers..js'
-import { handleCreateContainer, listContainer } from './containers/handleCreateContainers.js';
+import { handleCreateContainer, listContainer, getContainerPort } from './containers/handleCreateContainers.js';
 import { handleTerminalCreation } from './containers/handleTerminalCreation.js';
 import WebSocket, { WebSocketServer } from 'ws';
 
@@ -104,25 +104,37 @@ server.on('upgrade', (req, tcpsocket, head) => {
             const projectId = parsed.searchParams.get('projectId');
             console.log("project id received after connect", projectId);
 
-            webSocketForTerminal.handleUpgrade(req, tcpsocket, head, async (establishedWSConn) => {
-                try {
-                    const container = await handleCreateContainer(projectId);
-                    if (!container) {
-                        console.log('No container available for terminal connection', { projectId });
-                        try { establishedWSConn.close(); } catch (closeErr) {}
-                        return;
-                    }
-                    console.log('terminal connected', { projectId, url: req.url });
-                    handleTerminalCreation(container, establishedWSConn);
+                    webSocketForTerminal.handleUpgrade(req, tcpsocket, head, async (establishedWSConn) => {
+                        try {
+                            const container = await handleCreateContainer(projectId);
+                            if (!container) {
+                                console.log('No container available for terminal connection', { projectId });
+                                try { establishedWSConn.close(); } catch (closeErr) {}
+                                return;
+                            }
 
-                    establishedWSConn.on('close', () => {
-                        console.log('terminal websocket closed', { projectId, containerId: container.id });
+                            // emit the host port to any connected editor clients in the project room
+                            try {
+                                const hostPort = await getContainerPort(projectId);
+                                if (hostPort && editorNamespace) {
+                                    editorNamespace.to(projectId).emit('getPortSuccess', { port: hostPort });
+                                    console.log('emitted getPortSuccess for', projectId, hostPort);
+                                }
+                            } catch (emitErr) {
+                                console.warn('failed to emit getPortSuccess', emitErr);
+                            }
+
+                            handleTerminalCreation(container, establishedWSConn);
+                            console.log('terminal connected', { projectId, url: req.url });
+
+                            establishedWSConn.on('close', () => {
+                                console.log('terminal websocket closed', { projectId, containerId: container.id });
+                            });
+                        } catch (err) {
+                            console.error('failed to create terminal container', err);
+                            try { establishedWSConn.close(); } catch (closeErr) {}
+                        }
                     });
-                } catch (err) {
-                    console.error('failed to create terminal container', err);
-                    try { establishedWSConn.close(); } catch (closeErr) {}
-                }
-            });
         } catch (err) {
             console.error('failed to parse upgrade request url', err, req.url);
         }

@@ -92,3 +92,22 @@ export const handleCreateContainer = async ( projectId ) => {
     return null;
   }
 };
+
+
+export async function getContainerPort(containerName){
+        const container = await docker.listContainers({
+          name:containerName
+        })
+
+        if(container.length > 0){
+          const  containerInfo = await docker.getContainer(container[0].Id).inspect();
+          console.log("Container info",containerInfo);
+          try {
+          return containerInfo.NetworkSettings.Ports['5173/tcp'][0].HostPort;
+            
+          } catch (error) {
+            console.log("port not present");
+            return undefined
+          }
+        }
+}

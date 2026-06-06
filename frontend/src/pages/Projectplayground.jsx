@@ -8,22 +8,27 @@ import { useEditorSocketStore } from "../store/useEditorSocketStore.js"
 import { io } from 'socket.io-client'
 import BrowserTerminal from "../components/molecules/Terminal/BrowserTerminal.jsx"
 import { useTerminalSocketStore } from "../store/terminalSocketStore.js"
+import { Browser } from "../components/organisms/Browser/Browser.jsx"
+import { usePortStore } from "../store/portStore.js"
 
 
 const ProjectPlayground = ()=>{
     
     const { projectId:projectIdFromUrl } = useParams();
     const { projectId, setProjectId, setTreeStructure } = useTreeStructureStore();
+    const { port ,setPort } = usePortStore()
 
     const { setEditorSocket, editorSocket} = useEditorSocketStore();
-    const { setTerminalSocket} = useTerminalSocketStore()
+    const { terminalSocket,setTerminalSocket} = useTerminalSocketStore()
         const backendUrl = import.meta.env.VITE_BACKEND_URL || window.location.origin;
 
     function fetchPort(){
-        console.log(editorSocket);
-        
-           editorSocket.emit("getPort");
-           console.log("fetching port");
+        if(editorSocket && projectId){
+            editorSocket.emit('getPort',{ containerName: projectId });
+            console.log('fetching port for', projectId);
+        } else {
+            console.log('cannot fetch port yet', { editorSocket, projectId });
+        }
            
     }
 
@@ -76,7 +81,19 @@ const ProjectPlayground = ()=>{
 
 
 
-            },[setProjectId,projectIdFromUrl,setEditorSocket,setTreeStructure,setTerminalSocket])
+            },[setProjectId,projectIdFromUrl,setEditorSocket,setTreeStructure])
+
+    // When both editor and terminal sockets become available, request the current host port
+    useEffect(() => {
+        if (editorSocket && terminalSocket && projectId) {
+            try {
+                editorSocket.emit('getPort', { containerName: projectId });
+                console.log('requested port for', projectId);
+            } catch (e) {
+                console.warn('failed to request port', e);
+            }
+        }
+    }, [editorSocket, terminalSocket, projectId]);
 
 
     return(
@@ -117,6 +134,20 @@ const ProjectPlayground = ()=>{
                 </button>
             </div>
             <BrowserTerminal/>
+
+            {/* ensure we fetch the latest host port when sockets become available */}
+            
+            {
+                (() => {
+                    /* effect hook cannot be placed inside JSX, so we'll rely on a separate effect below */
+                    return null;
+                })()
+            }
+
+
+            <div>
+                {projectIdFromUrl && terminalSocket &&  <Browser projectId={projectIdFromUrl}/>}
+            </div>
         </>
     )
 }

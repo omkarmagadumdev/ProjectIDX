@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom"
 import EditorComponent from "../components/molecules/EditorComponent/EditorComponent.jsx"
 import { EditorButton } from "../components/atoms/EditorButton/EditorButton.jsx"
 import TreeStructure from "../components/organisms/TreeStructure/TreeStructure.jsx"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useTreeStructureStore } from "../store/treeStructureStore.js"
 import { useEditorSocketStore } from "../store/useEditorSocketStore.js"
 import { io } from 'socket.io-client'
@@ -10,13 +10,14 @@ import BrowserTerminal from "../components/molecules/Terminal/BrowserTerminal.js
 import { useTerminalSocketStore } from "../store/terminalSocketStore.js"
 import { Browser } from "../components/organisms/Browser/Browser.jsx"
 import { usePortStore } from "../store/portStore.js"
+import { Button } from "antd/es/radio/index.js"
 
 
 const ProjectPlayground = ()=>{
     
     const { projectId:projectIdFromUrl } = useParams();
     const { projectId, setProjectId, setTreeStructure } = useTreeStructureStore();
-    const { port ,setPort } = usePortStore()
+    const [loadBrowser,setLoadBrowser] = useState(false)
 
     const { setEditorSocket, editorSocket} = useEditorSocketStore();
     const { terminalSocket,setTerminalSocket} = useTerminalSocketStore()
@@ -38,7 +39,8 @@ const ProjectPlayground = ()=>{
         let handleProjectTreeUpdated;
 
         if(projectIdFromUrl){
-            setProjectId(projectIdFromUrl);
+                setProjectId(projectIdFromUrl);
+                try{ setPort(null) }catch(e){}
           editorSocketConnection = io(`${import.meta.env.VITE_BACKEND_URL}/editor`,{
                 query:{
                     projectId:projectIdFromUrl
@@ -126,13 +128,6 @@ const ProjectPlayground = ()=>{
             </div>
             <EditorButton isActive={true}/>
             <EditorButton isActive={false}/>
-            <div>
-                <button
-                onClick={fetchPort}
-                >
-                    fetchport 
-                </button>
-            </div>
             <BrowserTerminal/>
 
             {/* ensure we fetch the latest host port when sockets become available */}
@@ -146,8 +141,14 @@ const ProjectPlayground = ()=>{
 
 
             <div>
-                {projectIdFromUrl && terminalSocket &&  <Browser projectId={projectIdFromUrl}/>}
+                {loadBrowser && terminalSocket &&  <Browser projectId={projectIdFromUrl}/>}
             </div>
+
+            <Button
+            onClick={()=>setLoadBrowser(true)}
+            >
+            Load Live Browser
+            </Button>
         </>
     )
 }

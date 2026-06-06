@@ -87,21 +87,9 @@ export const handleCreateContainer = async ( projectId ) => {
     await container.start();
 
     console.log("conatiner started");
-    // attempt to start the dev server inside the container so the mapped port becomes active
-    try {
-      const execInstance = await container.exec({
-        Cmd: ['bash','-lc','cd /home/sandbox/app/sandbox && npm install --silent || true && npm run dev -- --host 0.0.0.0'],
-        AttachStdout: true,
-        AttachStderr: true,
-        Tty: false,
-      });
-
-      // start detached so the container keeps running the dev server
-      await execInstance.start({ Detach: true });
-      console.log('started dev server in container', container.id);
-    } catch (err) {
-      console.warn('failed to start dev server inside container', err);
-    }
+    // NOTE: we intentionally do NOT auto-run `npm install` / `npm run dev` inside the
+    // container. Starting the dev server should be done manually from the in-browser
+    // terminal (or by an explicit user action) to avoid surprising port bindings.
     // projectContainerCache.set(projectId, container);
 
     return container;

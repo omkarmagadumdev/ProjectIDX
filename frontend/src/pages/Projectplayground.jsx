@@ -21,6 +21,7 @@ const ProjectPlayground = ()=>{
 
     const { setEditorSocket, editorSocket} = useEditorSocketStore();
     const { terminalSocket,setTerminalSocket} = useTerminalSocketStore()
+    const { setPort } = usePortStore();
         const backendUrl = import.meta.env.VITE_BACKEND_URL || window.location.origin;
 
     function fetchPort(){
@@ -139,16 +140,16 @@ const ProjectPlayground = ()=>{
                 })()
             }
 
-
-            <div>
-                {loadBrowser && terminalSocket &&  <Browser projectId={projectIdFromUrl}/>}
-            </div>
-
             <Button
             onClick={()=>setLoadBrowser(true)}
             >
             Load Live Browser
             </Button>
+
+            <div>
+                {loadBrowser && terminalSocket &&  <Browser projectId={projectIdFromUrl}/>}
+            </div>
+
         </>
     )
 }

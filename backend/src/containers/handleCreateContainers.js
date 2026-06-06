@@ -84,7 +84,7 @@ export const handleCreateContainer = async ( projectId ) => {
     // attempt to start the dev server inside the container so the mapped port becomes active
     try {
       const execInstance = await container.exec({
-        Cmd: ['bash','-lc','cd /home/sandbox/app && npm install --silent || true && npm run dev -- --host 0.0.0.0'],
+        Cmd: ['bash','-lc','cd /home/sandbox/app/sandbox && npm install --silent || true && npm run dev -- --host 0.0.0.0'],
         AttachStdout: true,
         AttachStderr: true,
         Tty: false,

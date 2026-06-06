@@ -26,15 +26,21 @@ export const handleCreateContainer = async ( projectId ) => {
   try {
     await docker.ping();
 
+    // include stopped containers as well so we can remove/replace them
     const existingContainer = await docker.listContainers({
-      name:projectId
+      all: true,
+      name: projectId
     });
 
     if(existingContainer.length > 0){
         console.log("conatiner already exists, stopping and removing it");
         const container =  docker.getContainer(existingContainer[0].Id) 
-        await container.stop();
-        await container.remove();
+        try {
+          await container.remove({ force: true });
+          console.log('removed existing container', existingContainer[0].Id);
+        } catch (removeErr) {
+          console.warn('failed to remove existing container, continuing', removeErr);
+        }
         
     }
 
@@ -110,8 +116,10 @@ export const handleCreateContainer = async ( projectId ) => {
 
 
 export async function getContainerPort(containerName){
+        // include stopped containers when looking up ports
         const container = await docker.listContainers({
-          name:containerName
+          all: true,
+          name: containerName
         })
 
         if(container.length > 0){

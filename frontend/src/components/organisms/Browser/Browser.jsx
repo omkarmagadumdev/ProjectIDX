@@ -39,15 +39,25 @@ export const Browser = ({ projectId }) => {
         const url = `http://localhost:${port}`;
 
         const check = async () => {
-            const maxAttempts = 60; // try for up to ~60 seconds
-            const delay = 1000;
+            const maxAttempts = 120; // try longer while npm install + vite start
+            const delay = 1500;
             for (let i = 0; i < maxAttempts && mounted; i++) {
                 try {
-                    // some dev servers don't respond to HEAD reliably; try GET but only read headers
                     const controller = new AbortController();
-                    const timer = setTimeout(() => controller.abort(), 3000);
-                    const res = await fetch(url, { method: 'GET', cache: 'no-store', signal: controller.signal });
+                    const timer = setTimeout(() => controller.abort(), 4000);
+                    // try root first
+                    let res = await fetch(url, { method: 'GET', cache: 'no-store', signal: controller.signal });
                     clearTimeout(timer);
+                    if (res && (res.ok || res.type === 'opaque' || res.status === 200)) {
+                        if (mounted) setReadyUrl(url);
+                        return;
+                    }
+
+                    // try index.html as some dev servers respond there
+                    const controller2 = new AbortController();
+                    const timer2 = setTimeout(() => controller2.abort(), 4000);
+                    res = await fetch(url + '/index.html', { method: 'GET', cache: 'no-store', signal: controller2.signal });
+                    clearTimeout(timer2);
                     if (res && (res.ok || res.type === 'opaque' || res.status === 200)) {
                         if (mounted) setReadyUrl(url);
                         return;
@@ -57,7 +67,8 @@ export const Browser = ({ projectId }) => {
                 }
                 await new Promise(r => setTimeout(r, delay));
             }
-            if (mounted) setReadyUrl(url);
+            // do not set readyUrl if checks never succeeded — keep showing loading state
+            console.warn('Browser health check timed out for', url);
         }
 
         check();

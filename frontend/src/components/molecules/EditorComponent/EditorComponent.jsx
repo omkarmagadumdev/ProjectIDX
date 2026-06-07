@@ -1,75 +1,92 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { Editor } from '@monaco-editor/react'
-import { theme } from 'antd';
-import { EditorButton } from '../../atoms/EditorButton/EditorButton';
 import { useActiveFileTabStore } from '../../../store/useActiveFileTabStore';
 import { extensionToFileType } from '../../../utils/extensionToFileType';
 import { useEditorSocketStore } from '../../../store/useEditorSocketStore';
+import draculaTheme from '../../../../Dracula.json'
 
 const EditorComponent = () => {
-  
-  let timerId = null;
-  const [editorState, setEditorState] = useState({
-    theme:null
-  });
+  const saveTimerRef = useRef(null)
 
   const { activeFileTab } = useActiveFileTabStore()
 
   const { editorSocket } = useEditorSocketStore()
 
-  async function downloadTheme(){
-    const response = await fetch("/Dracula.json");
-    const data = await  response.json();
-    setEditorState(prev => ({...prev,theme:data}))
-  }
+  useEffect(() => {
+    console.log('EditorComponent: activeFileTab ->', activeFileTab)
+    const extFromPath = activeFileTab?.path ? String(activeFileTab.path).split('/').pop().split('.').pop() : undefined
+    const computedExt = activeFileTab?.extension || (extFromPath ? extFromPath.toLowerCase() : undefined)
+    const computedLanguage = extensionToFileType(computedExt)
+    console.log('EditorComponent: computed extension ->', computedExt)
+    console.log('EditorComponent: computed language ->', computedLanguage)
+  }, [activeFileTab])
 
   function handleChnage (value){
-    if(timerId != null){
-      clearTimeout(timerId)
+    if(saveTimerRef.current != null){
+      clearTimeout(saveTimerRef.current)
     }
-      timerId = setTimeout(()=>{
-        const editorContent = value
-          editorSocket.emit("writeFile",{
-            pathToFileOrFolder:activeFileTab.path,
-            value:editorContent
+      saveTimerRef.current = setTimeout(()=>{
+        if (!editorSocket?.emit || !activeFileTab?.path) {
+          console.warn('EditorComponent: cannot save file yet', {
+            hasSocket: !!editorSocket,
+            path: activeFileTab?.path,
           })
+          return
+        }
+
+        editorSocket.emit("writeFile",{
+          pathToFileOrFolder:activeFileTab.path,
+          data:value ?? ''
+        })
       },2000)
   }
 
-  useEffect(()=>{
-      downloadTheme()
-  },[])
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current != null) {
+        clearTimeout(saveTimerRef.current)
+      }
+    }
+  }, [])
 
   function handleOnMount (editor,monaco){
-    if(editorState.theme) {
-      try{
-        monaco.editor.defineTheme('Dracula', editorState.theme);
-        monaco.editor.setTheme('Dracula');
-      }catch(e){
-        console.warn('EditorComponent: failed to apply theme', e)
-      }
+    try{
+      monaco.editor.defineTheme('Dracula', draculaTheme);
+      monaco.editor.setTheme('Dracula');
+    }catch(e){
+      console.warn('EditorComponent: failed to apply theme', e)
     }
   }
 
   return ( 
     <>
-      {editorState.theme && <Editor 
-        height={'100vh'}
+      <Editor 
+        height={'75vh'}
         width={'100%'}
-        defaultLanguage={undefined}
         defaultValue='// Weclocme to the playground'
         onMount={handleOnMount}
+        beforeMount={(monaco) => {
+          try {
+            monaco.editor.defineTheme('Dracula', draculaTheme);
+          } catch (e) {
+            console.warn('EditorComponent: failed to predefine theme', e)
+          }
+        }}
+        theme="Dracula"
         options={{
             fontSize: 18,
           fontFamily: "Fira Code, monospace"
             
         }}
-        language={extensionToFileType(activeFileTab?.extension)}
+        language={(() => {
+          const extFromPath = activeFileTab?.path ? String(activeFileTab.path).split('/').pop().split('.').pop() : undefined
+          const computedExt = activeFileTab?.extension || (extFromPath ? extFromPath.toLowerCase() : undefined)
+          return extensionToFileType(computedExt)
+        })()}
         onChange={handleChnage}
         value={ activeFileTab?.value ? activeFileTab.value : '//welcome to playground' }
 
-      />}
- 
+      />
     </>
   )
 }

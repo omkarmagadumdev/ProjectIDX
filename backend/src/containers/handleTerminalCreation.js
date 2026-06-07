@@ -1,11 +1,19 @@
 export const handleTerminalCreation = ( container,ws )=>{
         container.exec({
-            Cmd:["/bin/bash", "-i"],
+            Cmd:["/bin/bash", "--noprofile", "--norc", "-i"],
             AttachStdin:true,
             AttachStdout:true,
             AttachStderr:true,
             Tty:true,
-            Env:["TERM=xterm-256color"]
+            Env:[
+                "TERM=xterm-256color",
+                "CI=true",
+                "FORCE_COLOR=0",
+                "npm_config_progress=false",
+                "npm_config_audit=false",
+                "npm_config_fund=false",
+                "npm_config_update_notifier=false"
+            ]
         },(err,exec) => {
             if(err){
                 console.log("Error while creating exec",err);

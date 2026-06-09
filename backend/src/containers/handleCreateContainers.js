@@ -2,7 +2,50 @@ import Docker from "dockerode";
 import fs from 'fs'
 
 const docker = new Docker();
-// const projectContainerCache = new Map();
+const CONTAINER_IMAGE = "sandbox";
+const PROJECT_MOUNT_ROOT = "/home/sandbox/app";
+
+async function findContainerByProjectId(projectId, includeStopped = true) {
+  const containers = await docker.listContainers({
+    all: includeStopped,
+    filters: {
+      name: [projectId]
+    }
+  });
+
+  if (!containers.length) {
+    return null;
+  }
+
+  return docker.getContainer(containers[0].Id);
+}
+
+async function createProjectContainer(projectId) {
+  return docker.createContainer({
+    Image: CONTAINER_IMAGE,
+    AttachStdin: true,
+    AttachStdout: true,
+    AttachStderr: true,
+    Cmd: ["/bin/bash", "-i"],
+    name: projectId,
+    Tty: true,
+    ExposedPorts: {
+      "5173/tcp": {},
+    },
+    Env: ["HOST=0.0.0.0", "TERM=xterm-256color"],
+    HostConfig: {
+      Binds: [`${process.cwd()}/projects/${projectId}:${PROJECT_MOUNT_ROOT}`],
+      PortBindings: {
+        "5173/tcp": [
+          {
+            HostPort: "0",
+          },
+        ],
+      },
+
+    },
+  });
+}
 
 export const listContainer = async ()=>{
       const containers = await docker.listContainers();
@@ -26,71 +69,21 @@ export const handleCreateContainer = async ( projectId ) => {
   try {
     await docker.ping();
 
-    // include stopped containers as well so we can remove/replace them
-    const existingContainer = await docker.listContainers({
-      all: true,
-      name: projectId
-    });
+    let container = await findContainerByProjectId(projectId);
 
-    if(existingContainer.length > 0){
-        console.log("conatiner already exists, stopping and removing it");
-        const container =  docker.getContainer(existingContainer[0].Id) 
-        try {
-          await container.remove({ force: true });
-          console.log('removed existing container', existingContainer[0].Id);
-        } catch (removeErr) {
-          console.warn('failed to remove existing container, continuing', removeErr);
-        }
-        
+    if (!container) {
+      console.log("creating a new container");
+      container = await createProjectContainer(projectId);
+      console.log("continer created", container.id);
+    } else {
+      console.log("reusing existing container", container.id);
     }
 
-    // const cachedContainer = projectContainerCache.get(projectId);
-    // if (cachedContainer) {
-    //   try {
-    //     await cachedContainer.inspect();
-    //     console.log('Reusing existing container', cachedContainer.id);
-    //     return cachedContainer;
-    //   } catch (inspectError) {
-    //     projectContainerCache.delete(projectId);
-    //   }
-    // }
-    
-    console.log("creating a new container");
-    
-    const container = await docker.createContainer({
-      Image: "sandbox",
-      AttachStdin: true,
-      AttachStdout: true,
-      AttachStderr: true,
-      Cmd: ["/bin/bash", "-i"],
-      name:projectId,
-      Tty: true,
-      ExposedPorts: {
-        "5173/tcp": {},
-      },
-      Env: ["HOST=0.0.0.0", "TERM=xterm-256color"],
-      HostConfig: {
-        Binds: [`${process.cwd()}/projects/${projectId}:/home/sandbox/app`],
-        PortBindings: {
-          "5173/tcp": [
-            {
-              HostPort: "0",
-            },
-          ],
-        },
-
-      },
-    });
-
-    console.log("continer created", container.id);
-
-    await container.start();
-
-    console.log("conatiner started");
-    // NOTE: we intentionally do NOT auto-run `npm install` / `npm run dev` inside the
-    // container. Starting the dev server should be done manually from the in-browser
-    // terminal (or by an explicit user action) to avoid surprising port bindings.
-    // projectContainerCache.set(projectId, container);
+    const details = await container.inspect();
+    if (!details.State?.Running) {
+      await container.start();
+      console.log("conatiner started");
+    }
 
     return container;
 
@@ -101,6 +94,52 @@ export const handleCreateContainer = async ( projectId ) => {
     return null;
   }
 };
+
+export async function runCommandInProjectContainer(projectId, command, options = {}) {
+  const container = await handleCreateContainer(projectId);
+  if (!container) {
+    throw new Error('Container is not available');
+  }
+
+  const workdir = options.workdir || `${PROJECT_MOUNT_ROOT}/sandbox`;
+  const exec = await container.exec({
+    Cmd: ["/bin/bash", "-lc", `cd ${workdir} && ${command}`],
+    AttachStdout: true,
+    AttachStderr: true,
+    Tty: true,
+    Env: [
+      "TERM=xterm-256color",
+      "CI=true",
+      "FORCE_COLOR=0",
+      "npm_config_progress=false",
+      "npm_config_audit=false",
+      "npm_config_fund=false",
+      "npm_config_update_notifier=false"
+    ]
+  });
+
+  const stream = await exec.start({
+    hijack: true,
+    tty: true
+  });
+
+  const chunks = [];
+
+  await new Promise((resolve, reject) => {
+    stream.on('data', (chunk) => {
+      chunks.push(Buffer.from(chunk));
+    });
+    stream.on('end', resolve);
+    stream.on('error', reject);
+  });
+
+  const result = await exec.inspect();
+
+  return {
+    exitCode: result.ExitCode,
+    output: Buffer.concat(chunks).toString('utf8')
+  };
+}
 
 
 export async function getContainerPort(containerName){

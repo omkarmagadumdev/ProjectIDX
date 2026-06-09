@@ -5,6 +5,7 @@ import apiRouter from './routes/index.js'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import { handleEditorSocketEvents } from './SockateHandlers/editorHandlers..js'
+import { startProjectWatcher } from './watchers/projectWatcher.js'
 import { handleCreateContainer, listContainer, getContainerPort } from './containers/handleCreateContainers.js';
 import { handleTerminalCreation } from './containers/handleTerminalCreation.js';
 import WebSocket, { WebSocketServer } from 'ws';
@@ -54,6 +55,14 @@ editorNamespace.on('connection', (socket) => {
 
     handleEditorSocketEvents(socket, editorNamespace);
 });
+
+// start fs watcher to notify editor clients of filesystem changes (e.g. rm -rf node_modules)
+try {
+    startProjectWatcher(editorNamespace);
+    console.log('project watcher started');
+} catch (e) {
+    console.warn('failed to start project watcher', e);
+}
 
 
 // Try to listen on the configured PORT, and if it's in use try subsequent ports

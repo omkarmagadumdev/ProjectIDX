@@ -2,22 +2,19 @@ import React, { useEffect, useRef } from 'react'
 import { Terminal } from 'xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import 'xterm/css/xterm.css'
-import { useParams } from 'react-router-dom'
 import { AttachAddon } from '@xterm/addon-attach'
 import { useTerminalSocketStore } from '../../../store/terminalSocketStore'
+import './BrowserTerminal.css'
 
 const BrowserTerminal = () => {
   const terminalRef = useRef(null)
   const socket = useRef(null)
-  const { projectId:projectIdFromUrl } = useParams(); 
-
   const { terminalSocket } = useTerminalSocketStore()
 
   useEffect(()=>{
-
-
       const term = new Terminal({
         cursorBlink: true,
+        scrollback: 2000,
         theme: {
           background: "#282a37",
           foreground: "#f8f8f3",
@@ -51,16 +48,46 @@ const BrowserTerminal = () => {
       const fitAddon = new FitAddon()
       term.loadAddon(fitAddon)
 
+      const fitTerminal = () => {
+        try {
+          if (!terminalRef.current || terminalRef.current.clientWidth === 0 || terminalRef.current.clientHeight === 0) {
+            return
+          }
+          fitAddon.fit()
+        } catch (e) {}
+      }
+
       if (terminalRef.current) {
         term.open(terminalRef.current)
-        fitAddon.fit()
-        term.writeln('Welcome to the in-browser terminal')
+        requestAnimationFrame(() => {
+          fitTerminal()
+          requestAnimationFrame(fitTerminal)
+        })
+        setTimeout(fitTerminal, 100)
+        setTimeout(fitTerminal, 350)
+        try {
+          term.writeln('Welcome to the in-browser terminal')
+        } catch (e) {}
       }
 
       const handleResize = () => {
-        try { fitAddon.fit() } catch (e) {}
+        fitTerminal()
       }
       window.addEventListener('resize', handleResize)
+
+      const resizeObserver = new ResizeObserver(() => {
+        fitTerminal()
+      })
+
+      if (terminalRef.current) {
+        resizeObserver.observe(terminalRef.current)
+      }
+
+      if (document.fonts?.ready) {
+        document.fonts.ready.then(() => {
+          fitTerminal()
+        }).catch(() => {})
+      }
 
       let attachAddon = null
       const attachTerminal = () => {
@@ -69,10 +96,18 @@ const BrowserTerminal = () => {
         }
         attachAddon = new AttachAddon(terminalSocket)
         term.loadAddon(attachAddon)
+        fitTerminal()
       }
 
       if (terminalSocket) {
         socket.current = terminalSocket
+
+        try {
+          // ensure binary frames are used so control sequences (Ctrl+C) are forwarded as binary
+          terminalSocket.binaryType = 'arraybuffer'
+        } catch (e) {
+          console.warn('failed to set binaryType on terminal socket', e)
+        }
 
         if (terminalSocket.readyState === WebSocket.OPEN) {
           attachTerminal()
@@ -84,6 +119,9 @@ const BrowserTerminal = () => {
 
       return () => {
         window.removeEventListener('resize', handleResize)
+        try {
+          resizeObserver.disconnect()
+        } catch (e) {}
         if (terminalSocket) {
           terminalSocket.removeEventListener('open', attachTerminal)
         }
@@ -110,8 +148,12 @@ const BrowserTerminal = () => {
       <div
       ref={terminalRef}
         style={{
-          height:'25vh',
-          overflow:'auto',
+          height:'100%',
+          width:'100%',
+          minHeight:'220px',
+          minWidth:0,
+          overflow:'hidden',
+          backgroundColor:'#282a37',
         }}
         className="terminal"
         id='terminal-container'

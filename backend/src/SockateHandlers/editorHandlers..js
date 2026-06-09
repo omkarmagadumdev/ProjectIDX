@@ -1,4 +1,5 @@
 import fs, { readFile } from 'fs/promises'
+import { getContainerPort } from '../containers/handleCreateContainers.js';
 
 export const handleEditorSocketEvents = (socket,editorNamespace)=>{
 
@@ -27,12 +28,14 @@ export const handleEditorSocketEvents = (socket,editorNamespace)=>{
     }
 
 
-    socket.on("writeFile",async({ data,pathToFileOrFolder })=>{
+    socket.on("writeFile",async({ data,value,pathToFileOrFolder })=>{
         try{
-            const response = await fs.writeFile(pathToFileOrFolder,data);
+            const nextContent = data ?? value ?? '';
+            const response = await fs.writeFile(pathToFileOrFolder,nextContent);
             emitToProjectRoom("writeFileSuccess",{
                 data:"File Written Successfully",
-                path:pathToFileOrFolder
+                path:pathToFileOrFolder,
+                value: nextContent
             }, true)
         }
         catch(error){
@@ -103,7 +106,8 @@ export const handleEditorSocketEvents = (socket,editorNamespace)=>{
             try {
                 const response = await fs.unlink(pathToFileOrFolder);   
                 socket.emit("deleteFileSuccess",{
-                    data:"File Deleted succesfully"
+                    data:"File Deleted succesfully",
+                    path: pathToFileOrFolder
                 })
                 emitTreeUpdated();
             } catch (error) {
@@ -135,7 +139,8 @@ export const handleEditorSocketEvents = (socket,editorNamespace)=>{
         try {
             const response = await fs.rm(pathToFileOrFolder,{ recursive:true, force:true });
             socket.emit("deletingFolderSuccess",{
-                data:"Folder deleted Successfully"
+                data:"Folder deleted Successfully",
+                path: pathToFileOrFolder
             })
             emitTreeUpdated();
         } catch (error) {
@@ -158,5 +163,14 @@ export const handleEditorSocketEvents = (socket,editorNamespace)=>{
             console.error('Error renaming', err);
             socket.emit('renameError', { error: String(err) });
         }
+    })
+
+    socket.on("getPort",async({ containerName })=>{
+        const port = await getContainerPort(containerName);
+        console.log("port data",port);
+        socket.emit('getPortSuccess',{
+            port:port,
+        })
+        
     })
 }

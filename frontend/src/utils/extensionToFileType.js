@@ -1,6 +1,6 @@
 const extensionToTypeMap = {
     js: "javascript",
-    jsx: "jsx",
+    jsx: "javascript",
     ts: "typescript",
     tsx: "typescript",
     html: "html",
@@ -51,5 +51,15 @@ const extensionToTypeMap = {
 
 export const extensionToFileType = (extension)=>{
     if(!extension) return undefined;
-    return extensionToTypeMap[extension]
+    // normalize input: files may be passed with mixed case
+    const key = String(extension).toLowerCase().trim();
+
+    // try direct lookup first (preserve original case keys)
+    if (extensionToTypeMap[extension]) return extensionToTypeMap[extension];
+
+    // try lowercase key lookup
+    if (extensionToTypeMap[key]) return extensionToTypeMap[key];
+
+    // fallback to plaintext so Monaco doesn't get undefined
+    return 'plaintext'
 }

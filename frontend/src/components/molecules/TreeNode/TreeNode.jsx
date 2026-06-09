@@ -4,6 +4,7 @@ import { GoChevronDown } from "react-icons/go";
 import FileIcon from '../../atoms/Fileicon/FileIcon';
 import { useEditorSocketStore } from "../../../store/useEditorSocketStore";
 import { useFileContextMenuStore } from "../../../store/fileContextMenuStore";
+import { useActiveFileTabStore } from "../../../store/useActiveFileTabStore";
 
 
 export const TreeNode = ({
@@ -11,6 +12,7 @@ export const TreeNode = ({
 })=>{
      const [ visibility,setVisibility ] = useState({})
     const {editorSocket} = useEditorSocketStore()
+    const { activeTabPath, activateTab } = useActiveFileTabStore()
 
 
     const { 
@@ -37,9 +39,7 @@ export const TreeNode = ({
         })
     }
 
-    function handleOnDoubleClick(fileFolderData){
-        console.log("double clicked",fileFolderData);
-
+    function requestFileContents(fileFolderData) {
         const filePath = fileFolderData?.path;
 
         if (!editorSocket || !filePath) {
@@ -55,7 +55,21 @@ export const TreeNode = ({
             path:filePath,
             pathToFileOrFolder:filePath
         })
+    }
 
+    function handleOpenFile(fileFolderData){
+        const filePath = fileFolderData?.path;
+        if (!filePath) {
+            return;
+        }
+
+        const existingTab = useActiveFileTabStore.getState().tabs.find((tab) => tab.path === filePath);
+        if (existingTab) {
+            activateTab(filePath);
+            return;
+        }
+
+        requestFileContents(fileFolderData)
     }
 
     function handleContextMenuForFiles(e,path,isFolder){
@@ -112,9 +126,11 @@ export const TreeNode = ({
                     margin:'0',
                     fontSize:'15px',
                     cursor:'pointer',
-                    color:'white'
+                    color: activeTabPath === fileFolderData.path ? '#8ab4ff' : 'white',
+                    textDecoration: activeTabPath === fileFolderData.path ? 'underline' : 'none'
                 }}
-                onDoubleClick={()=>handleOnDoubleClick(fileFolderData)}
+                onClick={()=>handleOpenFile(fileFolderData)}
+                onDoubleClick={()=>requestFileContents(fileFolderData)}
                 onContextMenu={(e)=> handleContextMenuForFiles(e,fileFolderData.path, false)}
                 >
                     

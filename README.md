@@ -6,3 +6,5 @@
 docker build -t sandbox .
 
 ```
+
+![alt text](<Screenshot 2026-06-13 112129.png>)

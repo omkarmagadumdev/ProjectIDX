@@ -1,4 +1,41 @@
-*{
-    margin: 0;
-    padding: 0;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 47% 4%;
+    --foreground: 213 31% 91%;
+    --border: 217 32% 17%;
+  }
+
+  body {
+    @apply bg-idx-bg text-slate-200 antialiased;
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+/* Allotment (Split Pane) Styling */
+.allotment-module_sash__1W_fH {
+  background-color: transparent !important;
+  width: 2px !important;
+  z-index: 50;
+}
+
+.allotment-module_sash__1W_fH::after {
+  content: "";
+  @apply absolute inset-0 transition-colors duration-200;
+}
+
+.allotment-module_sash__1W_fH:hover::after {
+  @apply bg-idx-accent;
+}
+
+/* Custom scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
